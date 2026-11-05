@@ -1,0 +1,61 @@
+name: Publish IR Control as Release and Package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-package.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Publish installable APK in GitHub Releases
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify APK and checksum
+        run: |
+          test -s releases/IRControl-Android-v1.1-API37.apk
+          sha256sum releases/IRControl-Android-v1.1-API37.apk
+      - name: Create official release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v1.1.0"
+          APK="releases/IRControl-Android-v1.1-API37.apk"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" "$APK" --repo "$GITHUB_REPOSITORY" --target main \
+              --title "IR Control v1.1.0 (Android API 37)" \
+              --notes "APK instalable de IR Control. Compatible con dispositivos Android que expongan un emisor IR mediante ConsumerIrManager. Compilada con compileSdk y targetSdk 37; minSdk 24. Version de prueba firmada con certificado debug. El ajuste porcentual regula la actividad temporal de las rafagas, no la potencia optica del LED."
+          fi
+
+  package:
+    name: Publish APK inside GitHub Packages (OCI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify APK
+        run: test -s releases/IRControl-Android-v1.1-API37.apk
+      - name: Create OCI container package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}:v1.1.0"
+          cat > /tmp/Dockerfile.ircontrol <<'EOF'
+          FROM scratch
+          ARG REPOSITORY
+          LABEL org.opencontainers.image.title="IR Control Android APK" \
+                org.opencontainers.image.description="Android IR emitter controller APK distributed as an OCI container artifact" \
+                org.opencontainers.image.source="https://github.com/${REPOSITORY}" \
+                org.opencontainers.image.version="1.1.0"
+          COPY releases/IRControl-Android-v1.1-API37.apk /IRControl.apk
+          EOF
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build --build-arg REPOSITORY="$GITHUB_REPOSITORY" -f /tmp/Dockerfile.ircontrol -t "$IMAGE" .
+          docker push "$IMAGE"
