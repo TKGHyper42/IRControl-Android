@@ -27,14 +27,18 @@ import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class MainActivity extends Activity {
-    private static final int BG = Color.rgb(9, 15, 28);
-    private static final int PANEL = Color.rgb(20, 31, 51);
-    private static final int BORDER = Color.rgb(48, 68, 93);
-    private static final int WHITE = Color.rgb(240, 248, 255);
-    private static final int MUTED = Color.rgb(155, 173, 196);
-    private static final int CYAN = Color.rgb(33, 217, 229);
-    private static final int AMBER = Color.rgb(255, 178, 85);
-    private static final int RED = Color.rgb(170, 64, 75);
+    private static final int BG = Color.rgb(7, 7, 11);
+    private static final int PANEL = Color.rgb(19, 19, 23);
+    private static final int SURFACE2 = Color.rgb(29, 27, 33);
+    private static final int BORDER = Color.rgb(54, 49, 60);
+    private static final int WHITE = Color.rgb(250, 247, 250);
+    private static final int MUTED = Color.rgb(169, 162, 173);
+    private static final int PINK = Color.rgb(255, 44, 119);
+    private static final int DEEP_PINK = Color.rgb(153, 3, 78);
+    private static final int CYAN = PINK;
+    private static final int GREEN = Color.rgb(54, 222, 141);
+    private static final int AMBER = Color.rgb(255, 187, 103);
+    private static final int RED = Color.rgb(158, 36, 67);
     private static final int FRAME_US = 100_000;
     private static final long COOLDOWN_MS = 3000L;
 
@@ -47,7 +51,7 @@ public final class MainActivity extends Activity {
     private volatile int durationSeconds = 15;
     private int sequence = 0;
     private long lastStop = -COOLDOWN_MS;
-    private TextView status, detail, level, countdown;
+    private TextView status, stateDot, detail, level, countdown;
     private Button toggle, test;
 
     @Override public void onCreate(Bundle state) {
@@ -59,10 +63,10 @@ public final class MainActivity extends Activity {
         catch (RuntimeException e) { hasEmitter = false; }
         buildUi();
         if (hasEmitter) {
-            show("EMISOR IR DETECTADO", CYAN);
-            detail.setText("Listo para transmitir por Android ConsumerIrManager.");
+            show("LISTO PARA TRANSMITIR", GREEN);
+            detail.setText("Hardware detectado mediante ConsumerIrManager.");
         } else {
-            show("EMISOR IR NO EXPUESTO", AMBER);
+            show("EMISOR IR NO DISPONIBLE", AMBER);
             detail.setText("El sistema/ROM no publica la interfaz IR. En una ROM personalizada puede faltar el HAL infrarrojo.");
         }
         toggle.setEnabled(hasEmitter);
@@ -73,39 +77,72 @@ public final class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(BG);
         scroll.setFillViewport(true);
+        scroll.setClipToPadding(false);
         scroll.setOnApplyWindowInsetsListener((v, insets) -> {
             scroll.setPadding(0, insets.getSystemWindowInsetTop(), 0, insets.getSystemWindowInsetBottom());
             return insets;
         });
+
         LinearLayout column = new LinearLayout(this);
         column.setOrientation(LinearLayout.VERTICAL);
-        column.setPadding(dp(22), dp(26), dp(22), dp(30));
+        column.setPadding(dp(20), dp(25), dp(20), dp(32));
         scroll.addView(column, new ScrollView.LayoutParams(-1, -2));
         setContentView(scroll);
 
-        column.addView(text("TKG HYPERX  /  HARDWARE LAB", 12, CYAN, true));
-        TextView heading = text("IR CONTROL", 35, WHITE, true);
-        add(column, heading, 7);
-        add(column, text("Control nativo del emisor IR de Android", 14, MUTED, false), 5);
+        // App identity — deliberately no personal attribution in the header.
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+
+        android.widget.ImageView logo = new android.widget.ImageView(this);
+        logo.setImageResource(R.drawable.ic_ir_wave_foreground);
+        logo.setContentDescription("Icono de onda infrarroja");
+        logo.setPadding(dp(4), dp(4), dp(4), dp(4));
+        logo.setBackground(background(SURFACE2, BORDER, 15));
+        LinearLayout.LayoutParams logoLp = new LinearLayout.LayoutParams(dp(54), dp(54));
+        logoLp.rightMargin = dp(14);
+        header.addView(logo, logoLp);
+
+        LinearLayout hero = new LinearLayout(this);
+        hero.setOrientation(LinearLayout.VERTICAL);
+        TextView heading = text("IR Control Testing", 23, WHITE, true);
+        hero.addView(heading);
+        add(hero, text("EMISOR INFRARROJO  •  V2.0", 10, MUTED, true), 3);
+        header.addView(hero, new LinearLayout.LayoutParams(0, -2, 1));
+        column.addView(header);
 
         LinearLayout stateCard = card();
-        add(column, stateCard, 24);
-        status = text("COMPROBANDO HARDWARE", 16, MUTED, true);
-        stateCard.addView(status);
-        detail = text("", 13, MUTED, false);
-        add(stateCard, detail, 9);
+        add(column, stateCard, 23);
+        LinearLayout stateLine = new LinearLayout(this);
+        stateLine.setGravity(Gravity.CENTER_VERTICAL);
+        stateDot = text("●", 18, GREEN, true);
+        LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(-2, -2);
+        dotLp.rightMargin = dp(11);
+        stateLine.addView(stateDot, dotLp);
+        status = text("VERIFICANDO EMISOR", 14, WHITE, true);
+        stateLine.addView(status, new LinearLayout.LayoutParams(0, -2, 1));
+        stateCard.addView(stateLine);
+        detail = text("", 12, MUTED, false);
+        add(stateCard, detail, 7);
 
         LinearLayout powerCard = card();
-        add(column, powerCard, 15);
-        powerCard.addView(text("ACTIVIDAD DEL IR", 12, MUTED, true));
-        level = text("10 %", 39, WHITE, true);
-        add(powerCard, level, 7);
+        add(column, powerCard, 14);
+        LinearLayout powerRow = new LinearLayout(this);
+        powerRow.setGravity(Gravity.CENTER_VERTICAL);
+        powerRow.addView(text("ACTIVIDAD DEL EMISOR", 13, MUTED, true),
+                new LinearLayout.LayoutParams(0, -2, 1));
+        level = text("10 %", 28, WHITE, true);
+        powerRow.addView(level);
+        powerCard.addView(powerRow);
+        add(powerCard, text("Ciclo de actividad infrarroja", 13, WHITE, false), 7);
         SeekBar seek = new SeekBar(this);
         seek.setMax(15);
         seek.setProgress(5);
-        seek.setProgressTintList(ColorStateList.valueOf(CYAN));
-        seek.setThumbTintList(ColorStateList.valueOf(CYAN));
-        add(powerCard, seek, 10);
+        seek.setProgressTintList(ColorStateList.valueOf(PINK));
+        seek.setThumbTintList(ColorStateList.valueOf(PINK));
+        seek.setProgressBackgroundTintList(ColorStateList.valueOf(BORDER));
+        add(powerCard, seek, 11);
+        addRangeLabels(powerCard, "5 %", "20 %");
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onProgressChanged(SeekBar bar, int p, boolean user) {
                 duty = p + 5;
@@ -114,14 +151,16 @@ public final class MainActivity extends Activity {
             @Override public void onStartTrackingTouch(SeekBar bar) {}
             @Override public void onStopTrackingTouch(SeekBar bar) {}
         });
-        powerCard.addView(text("5 %                                                       20 %", 11, MUTED, false));
-        add(powerCard, text("Porcentaje de tiempo con portadora IR durante cada ráfaga. No cambia la corriente ni la potencia óptica instantánea.", 12, MUTED, false), 11);
+        add(powerCard, text("Regula el tiempo activo de cada ráfaga; no modifica la corriente del LED.", 12, MUTED, false), 13);
 
-        LinearLayout config = card();
-        add(column, config, 15);
-        config.addView(text("FRECUENCIA DE PORTADORA", 12, MUTED, true));
+        LinearLayout carrierCard = card();
+        add(column, carrierCard, 14);
+        carrierCard.addView(text("∿  FRECUENCIA", 14, WHITE, true));
+        add(carrierCard, text("Portadora del emisor", 12, MUTED, false), 4);
         Spinner carrier = new Spinner(this);
-        add(config, carrier, 8);
+        carrier.setBackground(background(SURFACE2, BORDER, 12));
+        carrier.setPadding(dp(12), dp(3), dp(12), dp(3));
+        add(carrierCard, carrier, 12);
         ArrayList<Integer> frequencies = new ArrayList<>();
         if (hasEmitter) {
             try {
@@ -151,29 +190,36 @@ public final class MainActivity extends Activity {
             }
             @Override public void onNothingSelected(AdapterView<?> a) {}
         });
-        add(config, text("Frecuencias anunciadas por el controlador; 38 kHz si no reporta rangos.", 12, MUTED, false), 3);
-        add(config, text("TEMPORIZADOR", 12, MUTED, true), 18);
+        add(carrierCard, text("Opciones compatibles informadas por Android; 38 kHz como respaldo.", 12, MUTED, false), 10);
+
+        LinearLayout timerCard = card();
+        add(column, timerCard, 14);
+        timerCard.addView(text("◷  TEMPORIZADOR", 14, WHITE, true));
+        add(timerCard, text("Apagado automático", 12, MUTED, false), 4);
         Spinner timer = new Spinner(this);
+        timer.setBackground(background(SURFACE2, BORDER, 12));
+        timer.setPadding(dp(12), dp(3), dp(12), dp(3));
         timer.setAdapter(adapter(new String[]{"5 segundos", "15 segundos", "30 segundos"}));
         timer.setSelection(1);
         timer.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(AdapterView<?> a, View v, int p, long id) {
-                durationSeconds = new int[]{5,15,30}[p];
+                durationSeconds = new int[]{5, 15, 30}[p];
             }
             @Override public void onNothingSelected(AdapterView<?> a) {}
         });
-        add(config, timer, 7);
-        add(config, text("Apagado automático y al minimizar. Pausa de 3 segundos entre sesiones.", 12, MUTED, false), 4);
+        add(timerCard, timer, 12);
+        add(timerCard, text("Límite de 30 s, pausa de 3 s entre sesiones y detención al salir.", 12, MUTED, false), 10);
 
         toggle = new Button(this);
-        toggle.setText("INICIAR EMISIÓN");
-        toggle.setTextColor(BG);
-        toggle.setTextSize(15);
+        toggle.setText("TRANSMITIR IR");
+        toggle.setTextColor(WHITE);
+        toggle.setTextSize(16);
         toggle.setAllCaps(false);
         toggle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        toggle.setBackground(background(CYAN, CYAN, 16));
-        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(-1, dp(58));
-        tlp.topMargin = dp(23);
+        toggle.setBackground(primaryBackground());
+        toggle.setElevation(dp(3));
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(-1, dp(60));
+        tlp.topMargin = dp(22);
         column.addView(toggle, tlp);
         toggle.setOnClickListener(v -> {
             if (running.get()) stop("DETENIDO MANUALMENTE");
@@ -181,20 +227,42 @@ public final class MainActivity extends Activity {
         });
 
         test = new Button(this);
-        test.setText("PRUEBA CORTA (0.1 s)");
+        test.setText("PRUEBA RÁPIDA  ·  0.1 s");
         test.setAllCaps(false);
-        test.setTextSize(13);
+        test.setTextSize(14);
         test.setTextColor(WHITE);
-        test.setBackground(background(PANEL, BORDER, 16));
-        LinearLayout.LayoutParams testlp = new LinearLayout.LayoutParams(-1, dp(52));
-        testlp.topMargin = dp(12);
-        column.addView(test, testlp);
+        test.setBackground(background(SURFACE2, BORDER, 16));
+        LinearLayout.LayoutParams testLp = new LinearLayout.LayoutParams(-1, dp(52));
+        testLp.topMargin = dp(11);
+        column.addView(test, testLp);
         test.setOnClickListener(v -> quickTest());
 
-        countdown = text("", 15, CYAN, true);
+        countdown = text("LISTO", 13, MUTED, true);
         countdown.setGravity(Gravity.CENTER);
-        add(column, countdown, 17);
-        add(column, text("La señal infrarroja es invisible. No apuntes el emisor a los ojos. Las transmisiones repetidas pueden calentar el equipo; el límite de tiempo es una precaución, no una garantía térmica.", 12, MUTED, false), 22);
+        add(column, countdown, 15);
+
+        LinearLayout safetyCard = card();
+        add(column, safetyCard, 11);
+        safetyCard.addView(text("USO SEGURO", 12, PINK, true));
+        add(safetyCard, text("No apuntes el emisor a los ojos. La repetición de pulsos puede calentar el teléfono: detén la prueba si notas temperatura inusual. La protección temporal no garantiza seguridad térmica.", 12, MUTED, false), 7);
+    }
+
+    private void addRangeLabels(LinearLayout parent, String min, String max) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.addView(text(min, 11, MUTED, false),
+                new LinearLayout.LayoutParams(0, -2, 1));
+        TextView right = text(max, 11, MUTED, false);
+        right.setGravity(Gravity.RIGHT);
+        row.addView(right, new LinearLayout.LayoutParams(0, -2, 1));
+        parent.addView(row);
+    }
+
+    private GradientDrawable primaryBackground() {
+        GradientDrawable d = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{PINK, DEEP_PINK});
+        d.setCornerRadius(dp(16));
+        return d;
     }
 
     private void start() {
@@ -249,9 +317,9 @@ public final class MainActivity extends Activity {
         ++sequence;
         if (wasRunning) lastStop = SystemClock.elapsedRealtime();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        toggle.setText("INICIAR EMISIÓN");
-        toggle.setTextColor(BG);
-        toggle.setBackground(background(CYAN, CYAN, 16));
+        toggle.setText("TRANSMITIR IR");
+        toggle.setTextColor(WHITE);
+        toggle.setBackground(primaryBackground());
         toggle.setEnabled(hasEmitter && !testing);
         test.setEnabled(hasEmitter && !testing);
         if (wasRunning) {
@@ -294,7 +362,7 @@ public final class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    private void show(String s, int color) { status.setText(s); status.setTextColor(color); }
+    private void show(String s, int color) { status.setText(s); status.setTextColor(color); stateDot.setTextColor(color); }
     private int dp(int x) { return (int) (x * getResources().getDisplayMetrics().density + .5f); }
     private TextView text(String s, int sp, int color, boolean bold) {
         TextView t = new TextView(this);
