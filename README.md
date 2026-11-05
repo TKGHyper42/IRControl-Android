@@ -1,6 +1,6 @@
 # IR Control Testing — Android
 
-Aplicación de pruebas del emisor infrarrojo mediante la API oficial de Android \`ConsumerIrManager\`, sin root ni permisos de red.
+Aplicación de pruebas del emisor infrarrojo mediante la API oficial de Android `ConsumerIrManager`, sin root ni permisos de red.
 
 **Versión:** 2.0.0 · **compileSdk / targetSdk:** API 37 (Android 17) · **minSdk:** API 24 (Android 7.0) · **Licencia:** MIT.
 
@@ -13,7 +13,7 @@ Aplicación de pruebas del emisor infrarrojo mediante la API oficial de Android 
 
 ## Controles y límites
 
-- Detección del emisor con \`ConsumerIrManager\`; la ROM debe exponer la interfaz IR.
+- Detección del emisor con `ConsumerIrManager`; la ROM debe exponer la interfaz IR.
 - Portadora elegible entre frecuencias anunciadas por Android; respaldo de 38 kHz.
 - Ciclo de actividad ajustable de **5 a 20 %**. Este control NO aumenta la potencia óptica instantánea ni la corriente del LED.
 - Ráfagas IR de 100 ms, transmitidas en sesiones de 5, 15 o 30 segundos.
@@ -23,11 +23,22 @@ Aplicación de pruebas del emisor infrarrojo mediante la API oficial de Android 
 
 ## Descargar y probar la APK
 
-1. Abre [GitHub Actions · Build IR Control APK](https://github.com/TKGHyper42/IRControl-Android/actions/workflows/build-apk.yml).
-2. Selecciona una ejecución exitosa de la rama \`main\` para esta versión.
-3. Descarga el artefacto **IRControl-APK** e instala \`app-debug.apk\`.
+**[Descarga la APK más reciente en GitHub Releases](https://github.com/TKGHyper42/IRControl-Android/releases/latest)**
 
-Es una APK de depuración. La compilación de GitHub Actions utiliza JDK 17, Gradle 9.6.0, Android Gradle Plugin 9.4.0 y SDK API 37. Para generar localmente, ejecuta \`gradle :app:assembleDebug\` con las mismas dependencias instaladas.
+Cada nueva versión que compile correctamente en **main** tendrá su propio lanzamiento con una APK de nombre como **IRControl-Android-v2.0.0-API37.apk**.
+
+Como respaldo, también se publica el artefacto **IRControl-APK** en [GitHub Actions · Build and Publish IR Control APK](https://github.com/TKGHyper42/IRControl-Android/actions/workflows/build-apk.yml).
+
+La APK está firmada con una clave de depuración generada en GitHub Actions, no con un certificado de publicación estable. Si cambia la firma entre versiones, Android podría requerir desinstalar la versión previa antes de instalar la nueva.
+
+## Cómo publicar una nueva versión
+
+1. Incrementa **versionName** y **versionCode** en app/build.gradle. Por ejemplo, versionName '2.1.0' y versionCode 4.
+2. Sube el cambio a **main**.
+3. GitHub Actions compila la APK y crea automáticamente el lanzamiento de la nueva versión.
+4. Si el tag de la versión ya existe, el lanzamiento anterior se conserva: incrementa la versión para publicar otra.
+
+El workflow también admite ejecución manual desde GitHub Actions. Los lanzamientos solo se crean si la compilación ha concluido correctamente.
 
 ## Seguridad
 
@@ -35,6 +46,6 @@ No dirijas el emisor a los ojos. Detén la aplicación si el equipo se calienta.
 
 ## Código
 
-La interfaz y la transmisión están en \`app/src/main/java/com/tkghyperx/ircontrol/MainActivity.java\`; los íconos son recursos vectoriales XML en \`app/src/main/res\`.
+La interfaz y la transmisión están en `app/src/main/java/com/tkghyperx/ircontrol/MainActivity.java`; los íconos son recursos vectoriales XML en `app/src/main/res`.
 
 Licencia MIT.

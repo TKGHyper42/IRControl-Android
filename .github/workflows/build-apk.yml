@@ -1,17 +1,27 @@
-name: Build IR Control APK
+name: Build and Publish IR Control APK
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'app/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
+      - '.github/workflows/build-apk.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: ir-control-release
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,11 +43,49 @@ jobs:
           if [ -d "$ANDROID_HOME/platforms/android-37.0" ] && [ ! -e "$ANDROID_HOME/platforms/android-37" ]; then
             ln -s android-37.0 "$ANDROID_HOME/platforms/android-37"
           fi
+      - name: Identify application version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(awk -F"'" '/^[[:space:]]*versionName[[:space:]]+/ {print $2; exit}' app/build.gradle)"
+          API="$(sed -nE 's/^[[:space:]]*compileSdk[[:space:]]+([0-9]+).*$/\1/p' app/build.gradle | head -n1)"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ ! "$API" =~ ^[0-9]+$ ]]; then
+            echo "::error::Could not identify versionName or compileSdk in app/build.gradle"
+            exit 1
+          fi
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "filename=IRControl-Android-v$VERSION-API$API.apk" >> "$GITHUB_OUTPUT"
+          echo "Building IR Control Testing v$VERSION for API $API"
       - name: Build signed debug APK
         run: gradle --no-daemon --stacktrace :app:assembleDebug
-      - name: Upload APK
+      - name: Stage versioned APK
+        env:
+          APK_FILENAME: ${{ steps.version.outputs.filename }}
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/$APK_FILENAME"
+          test -s "dist/$APK_FILENAME"
+          sha256sum "dist/$APK_FILENAME"
+      - name: Upload APK as Actions artifact
         uses: actions/upload-artifact@v4
         with:
           name: IRControl-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: dist/*.apk
           if-no-files-found: error
+      - name: Publish one GitHub Release per version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          APK_FILENAME: ${{ steps.version.outputs.filename }}
+        run: |
+          # Do not silently overwrite a release from an older source revision.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::notice::Release $TAG exists. Bump versionName and versionCode in app/build.gradle for the next release."
+            exit 0
+          fi
+          gh release create "$TAG" "dist/$APK_FILENAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "IR Control Testing $TAG (Android API 37)" \
+            --generate-notes
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName,assets,url
